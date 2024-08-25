@@ -19,15 +19,16 @@ for file in datas:
     total_required_points = width * height
     
     if num_points < total_required_points:
-        # Pad the point cloud with zeros (or any other padding value)
+        #Pad the point cloud with zeros
         padding = np.zeros((total_required_points - num_points, points_np_sorted.shape[1]))
         points_padded = np.vstack((points, padding))
     else:
-        # Crop the point cloud to fit the grid size
+        #Crop the point clouds to fit the grid size
         points_padded = points_np_sorted[:total_required_points]
 
     
     organized_points = points_padded.reshape(height, width, points_np_sorted.shape[1])
+    print(organized_points[2])
     #np.save("pcd\\organized\\data\\"+ str(file)[:-4]+".npy", organized_points)
 
 # points = organized_points.reshape(-1, 3)
@@ -35,4 +36,4 @@ for file in datas:
 # pcd = o3d.geometry.PointCloud()
 # pcd.points = o3d.utility.Vector3dVector(points)
 
-o3d.visualization.draw_geometries([pcd])
+#o3d.visualization.draw_geometries([pcd])
