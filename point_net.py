@@ -30,15 +30,15 @@ class Tnet(nn.Module):
     def forward(self, x):
         bs = x.shape[0]
 
-        # pass through shared MLP layers (conv1d)
+        #shared MLP layers (conv1d)
         x = self.bn1(F.relu(self.conv1(x)))
         x = self.bn2(F.relu(self.conv2(x)))
         x = self.bn3(F.relu(self.conv3(x)))
 
-        # max pool over num points
+        #max pool
         x = self.max_pool(x).view(bs, -1)
         
-        # pass through MLP
+        #MLP
         x = self.bn4(F.relu(self.linear1(x)))
         x = self.bn5(F.relu(self.linear2(x)))
         x = self.linear3(x)
@@ -53,7 +53,6 @@ class Tnet(nn.Module):
         return x
 
 
-# Point Net Backbone (main Architecture)
 class PointNetBackbone(nn.Module):
     
     def __init__(self, num_points=2500, num_global_feats=1024, local_feat=True):
@@ -121,21 +120,16 @@ class PointNetClassHead(nn.Module):
     def __init__(self, num_points=2500, num_global_feats=1024, k=2):
         super(PointNetClassHead, self).__init__()
 
-        #get the backbone (only need global features for classification)
         self.backbone = PointNetBackbone(num_points, num_global_feats, local_feat=False)
 
-        # MLP for classification
+        #MLP
         self.linear1 = nn.Linear(num_global_feats, 512)
         self.linear2 = nn.Linear(512, 256)
         self.linear3 = nn.Linear(256, k)
-
-        # batchnorm for the first 2 linear layers
+        
         self.bn1 = nn.BatchNorm1d(512)
         self.bn2 = nn.BatchNorm1d(256)
-
-        # The paper states that batch norm was only added to the layer 
-        # before the classication layer, but another version adds dropout  
-        # to the first 2 layers
+        
         self.dropout = nn.Dropout(p=0.3)
         
 
@@ -147,30 +141,27 @@ class PointNetClassHead(nn.Module):
         x = self.dropout(x)
         x = self.linear3(x)
 
-        # return logits
+        #return logits
         return x, crit_idxs, A_feat
 
 
-# Segmentation Head
+
 class PointNetSegHead(nn.Module):
-    ''' Segmentation Head '''
     def __init__(self, num_points=2500, num_global_feats=1024, m=2):
         super(PointNetSegHead, self).__init__()
 
         self.num_points = num_points
         self.m = m
 
-        # get the backbone 
         self.backbone = PointNetBackbone(num_points, num_global_feats, local_feat=True)
 
-        # shared MLP
+        #MLP
         num_features = num_global_feats + 64 # local and global features
         self.conv1 = nn.Conv1d(num_features, 512, kernel_size=1)
         self.conv2 = nn.Conv1d(512, 256, kernel_size=1)
         self.conv3 = nn.Conv1d(256, 128, kernel_size=1)
         self.conv4 = nn.Conv1d(128, m, kernel_size=1)
 
-        # batch norms for shared MLP
         self.bn1 = nn.BatchNorm1d(512)
         self.bn2 = nn.BatchNorm1d(256)
         self.bn3 = nn.BatchNorm1d(128)
@@ -181,7 +172,7 @@ class PointNetSegHead(nn.Module):
         # get combined features
         x, crit_idxs, A_feat = self.backbone(x) 
 
-        # pass through shared MLP
+        #MLP
         x = self.bn1(F.relu(self.conv1(x)))
         x = self.bn2(F.relu(self.conv2(x)))
         x = self.bn3(F.relu(self.conv3(x)))
@@ -191,9 +182,7 @@ class PointNetSegHead(nn.Module):
         
         return x, crit_idxs, A_feat
 
-    
-# ============================================================================
-# Test 
+     
 def main():
     test_data = torch.rand(32, 3, 2500)
 
