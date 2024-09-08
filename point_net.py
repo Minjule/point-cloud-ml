@@ -114,7 +114,14 @@ class PointNetBackbone(nn.Module):
         else:
             return global_features, critical_indexes, A_feat
 
+class PointNetDetectHead(nn.Module):
+    def __init__(self, num_points=2500, num_global_feats=1024):
+        super(PointNetDetectHead, self).__init__()
 
+        self.backbone = PointNetBackbone(num_points, num_global_feats, local_feat=False)
+
+
+        
 class PointNetClassHead(nn.Module):
 
     def __init__(self, num_points=2500, num_global_feats=1024, k=2):
