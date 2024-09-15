@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from torch.autograd import Variable
+import numpy as np
 
 class Tnet(nn.Module):
     def __init__(self, dim, num_points=2500):
@@ -115,10 +116,20 @@ class PointNetBackbone(nn.Module):
             return global_features, critical_indexes, A_feat
 
 class PointNetDetectHead(nn.Module):
-    def __init__(self, num_points=2500, num_global_feats=1024):
+    def __init__(self, num_points=2500, num_global_feats=1024, num_defaults=3):
         super(PointNetDetectHead, self).__init__()
 
         self.backbone = PointNetBackbone(num_points, num_global_feats, local_feat=False)
+
+        self.loc_layers = nn.ModuleList([nn.Conv1d(self.backbone[0], 6 * num_defaults, 3, padding=1)])
+    
+    def forward(self, x):
+        loc_preds = []
+        for l in zip(self.loc_layers):
+            loc_pred = l(x)
+            loc_preds.append(loc_pred.permute(0, 2, 1).reshape(-1, 6))
+        loc_preds = torch.cat(loc_preds, dim=0)
+        return loc_preds
 
 
         
