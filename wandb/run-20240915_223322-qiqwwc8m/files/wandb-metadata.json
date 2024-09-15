@@ -1,0 +1,45 @@
+{
+    "os": "Windows-10-10.0.19045-SP0",
+    "python": "3.8.19",
+    "heartbeatAt": "2024-09-15T14:33:23.453613",
+    "startedAt": "2024-09-15T14:33:22.109898",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "training.py",
+    "codePathLocal": "training.py",
+    "codePath": "training.py",
+    "git": {
+        "remote": "https://github.com/Minjule/point-cloud-ml.git",
+        "commit": "d552088fa47df0a78af3277afbc44cb3be23c064"
+    },
+    "email": "98895971+Minjule@users.noreply.github.com",
+    "root": "C:/Users/Acer/Documents/GitHub/point-cloud-ml",
+    "host": "DESKTOP-PU079E6",
+    "username": "Acer",
+    "executable": "C:\\Users\\Acer\\anaconda3\\envs\\open3d\\python.exe",
+    "cpu_count": 4,
+    "cpu_count_logical": 8,
+    "cpu_freq": {
+        "current": 1609.0,
+        "min": 0.0,
+        "max": 2112.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 1609.0,
+            "min": 0.0,
+            "max": 2112.0
+        }
+    ],
+    "disk": {
+        "/": {
+            "total": 238.37447357177734,
+            "used": 187.56717681884766
+        }
+    },
+    "memory": {
+        "total": 11.835014343261719
+    }
+}

@@ -120,8 +120,11 @@ class PointNetDetectHead(nn.Module):
         super(PointNetDetectHead, self).__init__()
 
         self.backbone = PointNetBackbone(num_points, num_global_feats, local_feat=False)
-
         self.loc_layers = nn.ModuleList([nn.Conv1d(self.backbone[0], 6 * num_defaults, 3, padding=1)])
+    
+    def generate_anchors(self, num_defaults):
+        self.loc_layers = nn.ModuleList([nn.Conv1d(self.backbone[0], 6 * num_defaults, 3, padding=1)])
+        return self.loc_layers
     
     def forward(self, x):
         loc_preds = []
@@ -130,8 +133,74 @@ class PointNetDetectHead(nn.Module):
             loc_preds.append(loc_pred.permute(0, 2, 1).reshape(-1, 6))
         loc_preds = torch.cat(loc_preds, dim=0)
         return loc_preds
+    
+    def compute_intersection_volume(self, box1, box2):
+        # Unpack box 1 and box 2
+        center_x1, center_y1, center_z1, w1, h1, d1 = box1
+        center_x2, center_y2, center_z2, w2, h2, d2 = box2
+        
+        # Calculate min/max boundaries for each box
+        x1_min, x1_max = center_x1 - w1 / 2, center_x1 + w1 / 2
+        y1_min, y1_max = center_y1 - h1 / 2, center_y1 + h1 / 2
+        z1_min, z1_max = center_z1 - d1 / 2, center_z1 + d1 / 2
 
+        x2_min, x2_max = center_x2 - w2 / 2, center_x2 + w2 / 2
+        y2_min, y2_max = center_y2 - h2 / 2, center_y2 + h2 / 2
+        z2_min, z2_max = center_z2 - d2 / 2, center_z2 + d2 / 2
+        
+        # Calculate the overlap in each dimension
+        x_overlap = max(0, min(x1_max, x2_max) - max(x1_min, x2_min))
+        y_overlap = max(0, min(y1_max, y2_max) - max(y1_min, y2_min))
+        z_overlap = max(0, min(z1_max, z2_max) - max(z1_min, z2_min))
+        
+        # Compute intersection volume
+        intersection_volume = x_overlap * y_overlap * z_overlap
+        
+        return intersection_volume
+    
+    def compute_iou(self, box1, box2):
+        # This is a simplified IoU function. You need to define the exact intersection
+        # volume calculation for 3D bounding boxes depending on your coordinate format.
+        intersection_vol = self.compute_intersection_volume(box1, box2)  # You need this function
+        vol_box1 = box1[3] * box1[4] * box1[5]  # width * height * depth
+        vol_box2 = box2[3] * box2[4] * box2[5]
+        union_vol = vol_box1 + vol_box2 - intersection_vol
+        return intersection_vol / union_vol
 
+    def match_anchors_to_ground_truth(self, anchors, loc_preds, gt_boxes, iou_threshold=0.5):
+        # anchors: predefined anchor boxes (3D anchors)
+        # loc_preds: predicted bounding boxes from the model
+        # gt_boxes: ground truth boxes
+        matched_gt_boxes = []
+        for i, anchor in enumerate(anchors):
+            iou_scores = [self.compute_iou(loc_preds[i], gt_box) for gt_box in gt_boxes]
+            max_iou = max(iou_scores)
+            if max_iou >= iou_threshold:
+                matched_gt_boxes.append(gt_boxes[iou_scores.index(max_iou)])
+            else:
+                matched_gt_boxes.append(None)  # Negative match, no object
+        return matched_gt_boxes
+
+    def ssd_loss(self, loc_preds, matched_boxes):
+
+        pos_mask = matched_boxes != None  # Positive samples mask
+        
+        # 1. Localization loss (Smooth L1 loss between matched GT boxes and predictions)
+        loc_loss = F.smooth_l1_loss(loc_preds[pos_mask], matched_boxes[pos_mask], reduction='sum')
+        
+        return loc_loss
+
+    def non_maximum_suppression(self, pred_boxes, cls_scores, iou_threshold=0.5):
+        indices = cls_scores.argsort(descending=True)  # Sort in descending order
+        keep_boxes = []
+        while len(indices) > 0:
+            current_idx = indices[0]
+            keep_boxes.append(pred_boxes[current_idx])
+            remaining_boxes = pred_boxes[indices[1:]]
+            ious = [self.compute_iou(pred_boxes[current_idx], box) for box in remaining_boxes]
+            indices = indices[1:][[iou < iou_threshold for iou in ious]]
+        return keep_boxes
+        
         
 class PointNetClassHead(nn.Module):
 
