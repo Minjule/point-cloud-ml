@@ -269,6 +269,16 @@ class PointNetSegHead(nn.Module):
         
         return x, crit_idxs, A_feat
 
+class PointNet(nn.Module):
+    def __init__(self, dim, num_points=2500, num_global_feats=1024, local_feat=False):
+        super(PointNet, self).__init__()
+
+        self.detect = PointNetDetectHead(num_points, num_global_feats, local_feat=local_feat, num_defaults=3)
+
+    def forward(self, x):
+        preds = self.detect(x)
+        return preds
+
      
 def main():
     test_data = torch.rand(32, 3, 2500)

@@ -94,6 +94,9 @@ def get_eval_acc_results(model, data_loader, device):
 
         return np.mean(accs)
 
+def generate_anchors(num_defaults):
+        loc_layers = nn.ModuleList([nn.Conv1d(backbone[0], 6 * num_defaults, 3, padding=1)])
+        return loc_layers
 
 if __name__ == "__main__":
     writer = SummaryWriter('./output/runs/tersorboard')
@@ -104,8 +107,6 @@ if __name__ == "__main__":
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
     print("Set model and optimizer...")
 
-    tnet = Tnet(dim=3).to(device=device)
-    backbone = PointNetBackbone().to(device=device)
     detect = PointNetDetectHead().to(device=device)
     optimizer_detect = optim.Adam(detect.parameters(), lr=lr)
     scheduler_detect = optim.lr_scheduler.StepLR(optimizer_detect, step_size=decay_lr_every, gamma=decay_lr_factor)
