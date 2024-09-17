@@ -1,9 +1,0 @@
-
-Loading train dataset...
-Set model and optimizer...
-Traceback (most recent call last):
-  File "training.py", line 109, in <module>
-    detect = PointNetDetectHead().to(device=device)
-  File "C:\Users\Acer\Documents\GitHub\point-cloud-ml\point_net.py", line 123, in __init__
-    self.loc_layers = nn.ModuleList([nn.Conv1d(self.backbone[0], 6 * num_defaults, 3, padding=1)])
-TypeError: 'PointNetBackbone' object is not subscriptable

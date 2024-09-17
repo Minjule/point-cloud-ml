@@ -94,10 +94,6 @@ def get_eval_acc_results(model, data_loader, device):
 
         return np.mean(accs)
 
-def generate_anchors(num_defaults):
-        loc_layers = nn.ModuleList([nn.Conv1d(backbone[0], 6 * num_defaults, 3, padding=1)])
-        return loc_layers
-
 if __name__ == "__main__":
     writer = SummaryWriter('./output/runs/tersorboard')
     torch.manual_seed(SEED)

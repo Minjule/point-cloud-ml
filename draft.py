@@ -7,50 +7,27 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from point_net import *
+from torch.utils.data import DataLoader
+from dataset import PointNetDataset
 
-datas = os.listdir("pcd\\data\\")
-augmented_data = os.listdir("pcd\\augmented\\data\\")
-array = np.arange(0, 181, 10)
-max = 0
-for file in augmented_data:
-    pcd = o3d.io.read_point_cloud("pcd\\augmented\\data\\"+str(file))
-    pcd = np.asarray(pcd.points)
-    pcd = np.full([218295, 3], np.nan)
-    print(len(pcd))
+train_data = PointNetDataset("C:\\Users\\Acer\\Documents\\GitHub\\point-cloud-ml\\pcd\\augmented")
+train_loader = DataLoader(train_data, batch_size=16, shuffle=True)
 
-tnet = Tnet(dim=3)
-pointfeat = PointNetBackbone(local_feat=True)
-detect = PointNetDetectHead(m=3)
+if __name__ == '__main__':
+    gpus = [0]
+    device = torch.device(f'cuda:{gpus[0]}' if torch.cuda.is_available() else 'cpu')
+    detect = Tnet(dim=3).to(device=device)
 
-# Define model, optimizer, and other components
-model = MultiScalePointNetSSD(num_classes=3)  # Example with 3 object classes
-optimizer = optim.Adam(model.parameters(), lr=0.001)
+    for x, y in train_loader:
+        x = x.to(device)
+        kernel_size = 218283 // 5000
+        stride = kernel_size
+        avg_pool = nn.AvgPool1d(kernel_size=kernel_size, stride=stride)
+        x = avg_pool(x)
 
-def train_model(dataloader, model, optimizer, num_epochs, num_classes):
-    model.train()  # Set the model to training mode
-    
-    for epoch in range(num_epochs):
-        running_loss = 0.0
-        for i, (point_clouds, gt_boxes, gt_labels) in enumerate(dataloader):
-            optimizer.zero_grad()  # Zero the parameter gradients
-            
-            # Forward pass
-            loc_preds, cls_preds = model(point_clouds)  # Predict bounding boxes and class scores
-            
-            # Assume `anchors` are predefined 3D anchors at various scales and positions
-            anchors = generate_anchors()  # You need a function to define these
-            
-            # Match predicted boxes to ground truth
-            matched_boxes = match_anchors_to_ground_truth(anchors, loc_preds, gt_boxes)
-            
-            # Compute loss (SSD loss function)
-            loss = ssd_loss(loc_preds, cls_preds, matched_boxes, gt_labels, num_classes)
-            
-            # Backward pass and optimization
-            loss.backward()
-            optimizer.step()
-            
-            # Update running loss
-            running_loss += loss.item()
-        
-        print(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {running_loss / len(dataloader)}")
+        print(x.shape)
+        y = y.to(device)
+
+        out = detect(x)
+
+        print(out)

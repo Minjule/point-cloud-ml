@@ -3,6 +3,17 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
+from anchors import AnchorBox
+
+infos = {
+    'grid_size': (10, 10, 10),  # Number of grid points in (x, y, z) dimensions
+    'min_sizes': [0.13, 0.13, 0.13],  # Min sizes for anchor boxes in 3D
+    'max_sizes': [0.18, 0.18, 0.18],  # Max sizes for anchor boxes in 3D
+    'aspect_ratios': [(1, 1, 1), (1.5, 1, 1), (1, 1.5, 1)],  # Aspect ratios for anchor boxes
+    'steps': [0.5, 0.5, 0.5],  # Step size for the anchor grid in 3D space
+    'point_cloud_range': [-8.90265846,  -8.36585426, -10.08037663, 10.86396313,  5.29646969, 14.27643776],  # 3D space range in (x_min, y_min, z_min, x_max, y_max, z_max)
+    'clip': True  
+}
 
 class Tnet(nn.Module):
     def __init__(self, dim, num_points=2500):
@@ -30,6 +41,7 @@ class Tnet(nn.Module):
 
     def forward(self, x):
         bs = x.shape[0]
+        print(x.shape[0])
 
         #shared MLP layers (conv1d)
         x = self.bn1(F.relu(self.conv1(x)))
@@ -56,7 +68,7 @@ class Tnet(nn.Module):
 
 class PointNetBackbone(nn.Module):
     
-    def __init__(self, num_points=2500, num_global_feats=1024, local_feat=True):
+    def __init__(self, num_points=218295, num_global_feats=1024, local_feat=True):
 
         super(PointNetBackbone, self).__init__()
 
@@ -116,18 +128,19 @@ class PointNetBackbone(nn.Module):
             return global_features, critical_indexes, A_feat
 
 class PointNetDetectHead(nn.Module):
-    def __init__(self, num_points=2500, num_global_feats=1024, num_defaults=3):
+    def __init__(self, num_points=218295, num_global_feats=1024, num_defaults=3):
         super(PointNetDetectHead, self).__init__()
 
         self.backbone = PointNetBackbone(num_points, num_global_feats, local_feat=False)
-        self.loc_layers = nn.ModuleList([nn.Conv1d(self.backbone[0], 6 * num_defaults, 3, padding=1)])
+        self.loc_layers = nn.ModuleList([nn.Conv1d(self.backbone, 6 * num_defaults, 3, padding=1)])
     
-    def generate_anchors(self, num_defaults):
-        self.loc_layers = nn.ModuleList([nn.Conv1d(self.backbone[0], 6 * num_defaults, 3, padding=1)])
-        return self.loc_layers
+    def generate_anchors(self):
+        boxes = AnchorBox(infos)()
+        return boxes
     
     def forward(self, x):
         loc_preds = []
+        self.backbone(x)
         for l in zip(self.loc_layers):
             loc_pred = l(x)
             loc_preds.append(loc_pred.permute(0, 2, 1).reshape(-1, 6))
@@ -316,4 +329,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    gpus = [0]
+    device = torch.device(f'cuda:{gpus[0]}' if torch.cuda.is_available() else 'cpu')
+    detect = PointNetBackbone(local_feat=True).to(device=device)
+    print(detect)
+

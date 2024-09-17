@@ -4,11 +4,11 @@ from itertools import product as product
 
 infos = {
     'grid_size': (10, 10, 10),  # Number of grid points in (x, y, z) dimensions
-    'min_sizes': [1.0, 2.0, 3.0],  # Min sizes for anchor boxes in 3D
-    'max_sizes': [2.0, 3.0, 4.0],  # Max sizes for anchor boxes in 3D
+    'min_sizes': [0.13, 0.13, 0.13],  # Min sizes for anchor boxes in 3D
+    'max_sizes': [0.18, 0.18, 0.18],  # Max sizes for anchor boxes in 3D
     'aspect_ratios': [(1, 1, 1), (1.5, 1, 1), (1, 1.5, 1)],  # Aspect ratios for anchor boxes
     'steps': [0.5, 0.5, 0.5],  # Step size for the anchor grid in 3D space
-    'point_cloud_range': [-10, -10, -5, 10, 10, 5],  # 3D space range in (x_min, y_min, z_min, x_max, y_max, z_max)
+    'point_cloud_range': [-8.90265846,  -8.36585426, -10.08037663, 10.86396313,  5.29646969, 14.27643776],  # 3D space range in (x_min, y_min, z_min, x_max, y_max, z_max)
     'clip': True  
 }
 
@@ -52,10 +52,10 @@ class AnchorBox(object):
 
     output = np.array(boxes).reshape([-1, 6])  # shape: [8732, 4]
     if self.clip:
-      output = np.clip(output, a_min=0, a_max=1.0)
+      output = np.clip(output, a_min=-10, a_max=14)
     return output
 
 
 # if __name__ == '__main__':
-#   boxes = AnchorBox(v2)()
+#   boxes = AnchorBox(infos)()
 #   print(boxes)
