@@ -107,6 +107,9 @@ if __name__ == "__main__":
     optimizer_detect = optim.Adam(detect.parameters(), lr=lr)
     scheduler_detect = optim.lr_scheduler.StepLR(optimizer_detect, step_size=decay_lr_every, gamma=decay_lr_factor)
 
+    kernel_size = 218283 // 5000
+    stride = kernel_size
+    avg_pool = nn.AvgPool1d(kernel_size=kernel_size, stride=stride)
     best_acc = 0.0
     print("Start training...")
     for epoch in range(epochs):
@@ -115,6 +118,7 @@ if __name__ == "__main__":
       start_tic = time.time()
       for x, y in train_loader:
         x = x.to(device)
+        x = avg_pool(x)
         y = y.to(device)
 
         # set grad to zero
@@ -130,15 +134,11 @@ if __name__ == "__main__":
             # Compute loss (SSD loss function)
         loss_ssd = detect.ssd_loss(out, matched_boxes)
 
-        # compute loss
-        loss = softXEnt(out, y)
-        # loss backward
-        loss.backward()
         loss_ssd.backward()
         # update network's param
         optimizer_detect.step()
 
-        acc_loss += batch_size * loss.item()
+        acc_loss += batch_size * loss_ssd.item()
         num_samples += y.shape[0]
         global_step += 1
         acc = np.sum(np.argmax(out.cpu().detach().numpy(), axis=1) == np.argmax(y.cpu().detach().numpy(), axis=1)) / len(y)

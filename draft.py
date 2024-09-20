@@ -16,7 +16,7 @@ train_loader = DataLoader(train_data, batch_size=16, shuffle=True)
 if __name__ == '__main__':
     gpus = [0]
     device = torch.device(f'cuda:{gpus[0]}' if torch.cuda.is_available() else 'cpu')
-    detect = Tnet(dim=3).to(device=device)
+    detect = PointNetDetectHead().to(device=device)
 
     for x, y in train_loader:
         x = x.to(device)

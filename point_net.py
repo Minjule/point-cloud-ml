@@ -26,7 +26,7 @@ class Tnet(nn.Module):
         self.conv2 = nn.Conv1d(64, 128, kernel_size=1)
         self.conv3 = nn.Conv1d(128, 1024, kernel_size=1)
 
-        self.linear1 = nn.Linear(1024, 512)
+        self.linear1 = nn.Linear(2598912, 512)
         self.linear2 = nn.Linear(512, 256)
         self.linear3 = nn.Linear(256, dim**2)
 
@@ -36,7 +36,7 @@ class Tnet(nn.Module):
         self.bn4 = nn.BatchNorm1d(512)
         self.bn5 = nn.BatchNorm1d(256)
 
-        self.max_pool = nn.MaxPool1d(kernel_size=num_points)
+        self.max_pool = nn.MaxPool1d(kernel_size=3, stride=2, padding=1)
         
 
     def forward(self, x):
@@ -52,6 +52,8 @@ class Tnet(nn.Module):
         x = self.max_pool(x).view(bs, -1)
         
         #MLP
+        print(x.size())
+        x = x.view(x.size(0), -1)  # Flatten the tensor
         x = self.bn4(F.relu(self.linear1(x)))
         x = self.bn5(F.relu(self.linear2(x)))
         x = self.linear3(x)
@@ -68,7 +70,7 @@ class Tnet(nn.Module):
 
 class PointNetBackbone(nn.Module):
     
-    def __init__(self, num_points=218295, num_global_feats=1024, local_feat=True):
+    def __init__(self, num_points=5076, num_global_feats=1024, local_feat=True):
 
         super(PointNetBackbone, self).__init__()
 
@@ -132,7 +134,7 @@ class PointNetDetectHead(nn.Module):
         super(PointNetDetectHead, self).__init__()
 
         self.backbone = PointNetBackbone(num_points, num_global_feats, local_feat=False)
-        self.loc_layers = nn.ModuleList([nn.Conv1d(self.backbone, 6 * num_defaults, 3, padding=1)])
+        self.loc_layers = nn.ModuleList([nn.Conv1d(num_global_feats, 6 * num_defaults, 3, padding=1)])
     
     def generate_anchors(self):
         boxes = AnchorBox(infos)()
