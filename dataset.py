@@ -21,7 +21,6 @@ class PointNetDataset(Dataset):
   
   def __getitem__(self, idx):
     feature, box = self._features[idx], self._boxes[idx]
-    
     # normalize input to zero-mean
     feature = feature - np.mean(feature, axis=0, keepdims=True) # center; (N, 3)
     max_dist = np.max(np.linalg.norm(feature, axis=1))
@@ -38,32 +37,45 @@ class PointNetDataset(Dataset):
 
     # random jitter
     feature += np.random.normal(0, 0.02, size=feature.shape)
-    feature = torch.Tensor(feature.T)
-
+    feature = np.nan_to_num(feature, nan=0.0)
+    feature = feature.T
+    feature = torch.tensor(feature, dtype=torch.float32)
     return feature, box
   
   def load_trainD(self, dir):
     pcds = os.listdir(str(dir) + "\\data")
     for pcd in pcds:
+      print(pcd)
       points = o3d.io.read_point_cloud("pcd\\augmented\\data\\"+ str(pcd))
       points_np = np.asarray(points.points)
-      points_np = np.full([218295, 3], np.nan)
-      points_np = points_np[12:]
+      points_np = (points_np - np.mean(points_np, axis=0)) / np.std(points_np, axis=0)
 
-      self._features.append(points_np)
+      pcd_added = np.zeros((218295, 3), dtype=float)
+      pcd_added[:len(points_np)] = points_np
+      pcd_added = pcd_added[12:]
+
+      self._features.append(pcd_added)
       label = json.load(open(str(dir) + "\\labels\\" + str(pcd)[:-4] + ".json"))
+
+      box_ = []
       for i in label['objects']:
-        box_ = []
         box_.append(np.asarray([[i['centroid']["x"], i['centroid']["y"], i['centroid']["z"]],[i['dimensions']["length"], i['dimensions']["width"], i['dimensions']["height"]]]))
-      self._boxes.append(box_)
       
+      if len(box_) == 0:
+        box_ = [np.full((2, 3), np.nan) for _ in range(6)]
+      else:
+        nan_arrays = [np.full(box_[0].shape, np.nan) for _ in range(6-len(box_))]
+        if len(nan_arrays) != 0:
+          box_ = np.concatenate([box_] + [nan_arrays], axis=0)
+      self._boxes.append(box_)
+
     self._features = np.array(self._features)
     self._boxes = np.array(self._boxes)
 
 if __name__ == "__main__":
   train_data = PointNetDataset("pcd\\augmented")
   print(len(train_data))
-  train_loader = DataLoader(train_data, batch_size=2, shuffle=True)
+  train_loader = DataLoader(train_data, batch_size=4, shuffle=True)
   cnt = 0
   for pts, label in train_loader:
     # print(pts.shape)

@@ -1,0 +1,133 @@
+Loading train dataset...
+0000000000.pcd
+0000000001.pcd
+0000000002.pcd
+0000000003.pcd
+0000000004.pcd
+0000000005.pcd
+0000000006.pcd
+0000000007.pcd
+0000000008.pcd
+0000000009.pcd
+0000000010.pcd
+0000000011.pcd
+0000000012.pcd
+0000000013.pcd
+0000000014.pcd
+0000000015.pcd
+0000000016.pcd
+0000000017.pcd
+0000000018.pcd
+0000000019.pcd
+0000000020.pcd
+0000000021.pcd
+0000000022.pcd
+0000000023.pcd
+0000000024.pcd
+0000000025.pcd
+0000000026.pcd
+0000000027.pcd
+0000000028.pcd
+0000000029.pcd
+0000000030.pcd
+0000000031.pcd
+0000000032.pcd
+0000000033.pcd
+0000000034.pcd
+0000000035.pcd
+0000000036.pcd
+0000000037.pcd
+0000000038.pcd
+0000000039.pcd
+0000000040.pcd
+0000000041.pcd
+0000000042.pcd
+0000000043.pcd
+0000000044.pcd
+0000000045.pcd
+0000000046.pcd
+0000000047.pcd
+0000000048.pcd
+0000000049.pcd
+0000000050.pcd
+0000000051.pcd
+0000000052.pcd
+0000000053.pcd
+0000000054.pcd
+0000000055.pcd
+0000000056.pcd
+0000000057.pcd
+0000000058.pcd
+0000000059.pcd
+0000000060.pcd
+0000000061.pcd
+0000000062.pcd
+0000000063.pcd
+0000000064.pcd
+0000000065.pcd
+0000000066.pcd
+0000000067.pcd
+0000000068.pcd
+0000000069.pcd
+0000000070.pcd
+0000000071.pcd
+0000000072.pcd
+0000000073.pcd
+0000000074.pcd
+0000000075.pcd
+0000000076.pcd
+0000000077.pcd
+0000000078.pcd
+0000000079.pcd
+0000000080.pcd
+0000000081.pcd
+0000000082.pcd
+0000000083.pcd
+0000000084.pcd
+0000000085.pcd
+0000000086.pcd
+0000000087.pcd
+0000000088.pcd
+0000000089.pcd
+0000000090.pcd
+0000000091.pcd
+0000000092.pcd
+0000000093.pcd
+0000000094.pcd
+0000000095.pcd
+0000000096.pcd
+0000000097.pcd
+0000000098.pcd
+0000000099.pcd
+Set model and optimizer...
+Start training...
+32
+torch.Size([32, 2598912])
+32
+torch.Size([32, 2598912])
+Traceback (most recent call last):
+  File "training.py", line 127, in <module>
+    out = detect(x)
+  File "C:\Users\Acer\anaconda3\envs\open3d\lib\site-packages\torch\nn\modules\module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "C:\Users\Acer\anaconda3\envs\open3d\lib\site-packages\torch\nn\modules\module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\Acer\Documents\GitHub\point-cloud-ml\point_net.py", line 145, in forward
+    self.backbone(x)
+  File "C:\Users\Acer\anaconda3\envs\open3d\lib\site-packages\torch\nn\modules\module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "C:\Users\Acer\anaconda3\envs\open3d\lib\site-packages\torch\nn\modules\module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\Acer\Documents\GitHub\point-cloud-ml\point_net.py", line 121, in forward
+    global_features, critical_indexes = self.max_pool(x)    #get global feature vector and critical indexes
+  File "C:\Users\Acer\anaconda3\envs\open3d\lib\site-packages\torch\nn\modules\module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "C:\Users\Acer\anaconda3\envs\open3d\lib\site-packages\torch\nn\modules\module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "C:\Users\Acer\anaconda3\envs\open3d\lib\site-packages\torch\nn\modules\pooling.py", line 91, in forward
+    return F.max_pool1d(input, self.kernel_size, self.stride,
+  File "C:\Users\Acer\anaconda3\envs\open3d\lib\site-packages\torch\_jit_internal.py", line 501, in fn
+    return if_true(*args, **kwargs)
+  File "C:\Users\Acer\anaconda3\envs\open3d\lib\site-packages\torch\nn\functional.py", line 685, in max_pool1d_with_indices
+    return torch.max_pool1d_with_indices(input, kernel_size, stride, padding, dilation, ceil_mode)
+RuntimeError: Given input size: (1024x1x5076). Calculated output size: (1024x1x0). Output size is too small

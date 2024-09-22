@@ -2,32 +2,26 @@ import open3d as o3d
 import numpy as np
 import json 
 import os
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
-from point_net import *
-from torch.utils.data import DataLoader
-from dataset import PointNetDataset
 
-train_data = PointNetDataset("C:\\Users\\Acer\\Documents\\GitHub\\point-cloud-ml\\pcd\\augmented")
-train_loader = DataLoader(train_data, batch_size=16, shuffle=True)
+datas = os.listdir("pcd\\data\\")
+augmented_data = os.listdir("pcd\\augmented\\data\\")
+cnt = 0
 
-if __name__ == '__main__':
-    gpus = [0]
-    device = torch.device(f'cuda:{gpus[0]}' if torch.cuda.is_available() else 'cpu')
-    detect = PointNetDetectHead().to(device=device)
-
-    for x, y in train_loader:
-        x = x.to(device)
-        kernel_size = 218283 // 5000
-        stride = kernel_size
-        avg_pool = nn.AvgPool1d(kernel_size=kernel_size, stride=stride)
-        x = avg_pool(x)
-
-        print(x.shape)
-        y = y.to(device)
-
-        out = detect(x)
-
-        print(out)
+for file in augmented_data:
+    cnt += 1
+    pcd = o3d.io.read_point_cloud("pcd\\augmented\\data\\"+str(file))
+    label = json.load(open("pcd\\augmented\\labels\\" + str(file)[:-4] + ".json"))
+      
+    box_ = []
+    _boxes = []
+    for i in label['objects']:
+        box_.append(np.asarray([[i['centroid']["x"], i['centroid']["y"], i['centroid']["z"]],[i['dimensions']["length"], i['dimensions']["width"], i['dimensions']["height"]]]))
+    nan_arrays = [np.full(box_[0].shape, np.nan) for _ in range(6-len(box_))]
+    print(len(box_))
+    print(len(nan_arrays))
+    box_ = np.concatenate([box_] + [nan_arrays], axis=0)
+    _boxes.append(box_)
+    print(len(box_))
+    
+    if (cnt > 0):
+        break

@@ -26,7 +26,7 @@ class Tnet(nn.Module):
         self.conv2 = nn.Conv1d(64, 128, kernel_size=1)
         self.conv3 = nn.Conv1d(128, 1024, kernel_size=1)
 
-        self.linear1 = nn.Linear(2598912, 512)
+        self.linear1 = nn.Linear(1024, 512)
         self.linear2 = nn.Linear(512, 256)
         self.linear3 = nn.Linear(256, dim**2)
 
