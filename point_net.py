@@ -16,7 +16,7 @@ infos = {
 }
 
 class Tnet(nn.Module):
-    def __init__(self, dim, num_points=2500):
+    def __init__(self, dim):
 
         super(Tnet, self).__init__()
 
@@ -36,12 +36,10 @@ class Tnet(nn.Module):
         self.bn4 = nn.BatchNorm1d(512)
         self.bn5 = nn.BatchNorm1d(256)
 
-        self.max_pool = nn.MaxPool1d(kernel_size=3, stride=2, padding=1)
+        self.max_pool = nn.MaxPool1d(kernel_size=5076)
         
 
     def forward(self, x):
-        bs = x.shape[0]
-        print(x.shape[0])
 
         #shared MLP layers (conv1d)
         x = self.bn1(F.relu(self.conv1(x)))
@@ -49,17 +47,15 @@ class Tnet(nn.Module):
         x = self.bn3(F.relu(self.conv3(x)))
 
         #max pool
-        x = self.max_pool(x).view(bs, -1)
+        x = self.max_pool(x).view(4, 1024)
         
         #MLP
-        print(x.size())
-        x = x.view(x.size(0), -1)  # Flatten the tensor
         x = self.bn4(F.relu(self.linear1(x)))
         x = self.bn5(F.relu(self.linear2(x)))
         x = self.linear3(x)
 
         # initialize identity matrix
-        iden = torch.eye(self.dim, requires_grad=True).repeat(bs, 1, 1)
+        iden = torch.eye(self.dim, requires_grad=True).repeat(4, 1, 1)
         if x.is_cuda:
             iden = iden.cuda()
 
@@ -70,7 +66,7 @@ class Tnet(nn.Module):
 
 class PointNetBackbone(nn.Module):
     
-    def __init__(self, num_points=5076, num_global_feats=1024, local_feat=True):
+    def __init__(self, num_points=5076, num_global_feats=1024, local_feat=False):
 
         super(PointNetBackbone, self).__init__()
 
@@ -78,8 +74,8 @@ class PointNetBackbone(nn.Module):
         self.num_global_feats = num_global_feats
         self.local_feat = local_feat
 
-        self.tnet1 = Tnet(dim=3, num_points=num_points)   #Spatial Transformer Networks (T-nets)
-        self.tnet2 = Tnet(dim=64, num_points=num_points)
+        self.tnet1 = Tnet(dim=3)   #Spatial Transformer Networks (T-nets)
+        self.tnet2 = Tnet(dim=64)
 
         self.conv1 = nn.Conv1d(3, 64, kernel_size=1)      #shared MLP 1
         self.conv2 = nn.Conv1d(64, 64, kernel_size=1)
@@ -101,7 +97,6 @@ class PointNetBackbone(nn.Module):
 
     
     def forward(self, x):
-        
         bs = x.shape[0]
 
         A_input = self.tnet1(x)
@@ -130,11 +125,11 @@ class PointNetBackbone(nn.Module):
             return global_features, critical_indexes, A_feat
 
 class PointNetDetectHead(nn.Module):
-    def __init__(self, num_points=218295, num_global_feats=1024, num_defaults=3):
+    def __init__(self, num_points=5076, num_global_feats=1024, num_defaults=3):
         super(PointNetDetectHead, self).__init__()
 
-        self.backbone = PointNetBackbone(num_points, num_global_feats, local_feat=False)
-        self.loc_layers = nn.ModuleList([nn.Conv1d(num_global_feats, 6 * num_defaults, 3, padding=1)])
+        self.backbone = PointNetBackbone(num_points = num_points, num_global_feats =num_global_feats, local_feat=False)
+        self.loc_layers = nn.ModuleList([nn.Conv1d(4, 6 * num_defaults, 1)])
     
     def generate_anchors(self):
         boxes = AnchorBox(infos)()
@@ -142,10 +137,11 @@ class PointNetDetectHead(nn.Module):
     
     def forward(self, x):
         loc_preds = []
-        self.backbone(x)
-        for l in zip(self.loc_layers):
-            loc_pred = l(x)
-            loc_preds.append(loc_pred.permute(0, 2, 1).reshape(-1, 6))
+        out = self.backbone(x)
+        for l in self.loc_layers:
+            print(out[0].shape)
+            loc_pred = l(out[0])
+            loc_preds.append(loc_pred.reshape(-1, 6))
         loc_preds = torch.cat(loc_preds, dim=0)
         return loc_preds
     
@@ -164,9 +160,9 @@ class PointNetDetectHead(nn.Module):
         z2_min, z2_max = center_z2 - d2 / 2, center_z2 + d2 / 2
         
         # Calculate the overlap in each dimension
-        x_overlap = max(0, min(x1_max, x2_max) - max(x1_min, x2_min))
-        y_overlap = max(0, min(y1_max, y2_max) - max(y1_min, y2_min))
-        z_overlap = max(0, min(z1_max, z2_max) - max(z1_min, z2_min))
+        x_overlap = torch.max(torch.zeros_like(x1_max), torch.min(x1_max, x2_max) - torch.max(x1_min, x2_min))
+        y_overlap = torch.max(torch.zeros_like(y1_max), torch.min(y1_max, y2_max) - torch.max(y1_min, y2_min))
+        z_overlap = torch.max(torch.zeros_like(z1_max), torch.min(z1_max, z2_max) - torch.max(z1_min, z2_min))
         
         # Compute intersection volume
         intersection_volume = x_overlap * y_overlap * z_overlap
@@ -189,7 +185,7 @@ class PointNetDetectHead(nn.Module):
         matched_gt_boxes = []
         for i, anchor in enumerate(anchors):
             iou_scores = [self.compute_iou(loc_preds[i], gt_box) for gt_box in gt_boxes]
-            max_iou = max(iou_scores)
+            max_iou = torch.max(iou_scores)
             if max_iou >= iou_threshold:
                 matched_gt_boxes.append(gt_boxes[iou_scores.index(max_iou)])
             else:

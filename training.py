@@ -20,7 +20,7 @@ def get_timestamp():
     return timestamp
 
 SEED = 13
-batch_size = 32
+batch_size = 4
 epochs = 20
 decay_lr_factor = 0.95
 decay_lr_every = 2
