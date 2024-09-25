@@ -17,7 +17,7 @@ infos = {
     'max_sizes': [0.18, 0.18, 0.18],  # Max sizes for anchor boxes in 3D
     'aspect_ratios': [(1, 1, 1), (1.5, 1, 1), (1, 1.5, 1)],  # Aspect ratios for anchor boxes
     'steps': [0.5, 0.5, 0.5],  # Step size for the anchor grid in 3D space
-    'point_cloud_range': [-8.90265846,  -8.36585426, -10.08037663, 10.86396313,  5.29646969, 14.27643776],  # 3D space range in (x_min, y_min, z_min, x_max, y_max, z_max)
+    'point_cloud_range': [-2.90265846,  0.13, 0.8, 0.18,  0.5, 1.5],  # 3D space range in (x_min, y_min, z_min, x_max, y_max, z_max)
     'clip': True  
 }
 
@@ -49,12 +49,12 @@ def compute_intersection_volume(box1, box2):
         
         # Compute intersection volume
         intersection_volume = x_overlap * y_overlap * z_overlap
-        print(f"x1_min - {x1_min}, y1_min - {y1_min}, z1_min - {z1_min}")
-        print(f"x1_max - {x1_max}, y1_max - {y1_max}, z1_max - {z1_max}")
-        print(f"x2_min - {x2_min}, y2_min - {y2_min}, z2_min - {z2_min}")
-        print(f"x2_max - {x2_max}, y2_max - {y2_max}, z2_max - {z2_max}")
-        print(f"overlaps ---------------------- {x_overlap}, {y_overlap}, {z_overlap}")
-        
+        # print(f"x1_min - {x1_min}, y1_min - {y1_min}, z1_min - {z1_min}")
+        # print(f"x1_max - {x1_max}, y1_max - {y1_max}, z1_max - {z1_max}")
+        # print(f"x2_min - {x2_min}, y2_min - {y2_min}, z2_min - {z2_min}")
+        # print(f"x2_max - {x2_max}, y2_max - {y2_max}, z2_max - {z2_max}")
+        # print(f"overlaps --------------------------------------------- {torch.min(x1_max, x2_max)}, {torch.max(x1_min, x2_min)}, {torch.min(x1_max, x2_max)-torch.max(x1_min, x2_min)}")
+        # print(f"intersection volume = {intersection_volume}")
         return intersection_volume
     
 def compute_iou(box1, box2):   
@@ -224,24 +224,23 @@ if __name__ == '__main__':
         print(f"anchor[0] = {anchors[0]}")
         iou_scores = []
         for i, anchor in enumerate(anchors):
-            a+=1
+            a=1
+           # anchor = [0.20, 0.20, -2.20, 13, 13, 13]
             for gt_box in y:
-                print(gt_box.shape)
                 if not np.all(np.isnan(np.array(gt_box))): 
                     iou_scores = [compute_iou(anchor, box) for box in gt_box]
 
             if len(iou_scores) != 0:
-                max_iou = torch.max(torch.tensor(iou_scores))
-                if max_iou >= 0.8:
+                tensor_stack = torch.stack(iou_scores)
+                non_nan_tensors = tensor_stack[~torch.isnan(tensor_stack)]
+                max_iou = torch.max(non_nan_tensors)
+                #print(f"iou_scores - {iou_scores}")
+                if max_iou >= 0.1:
                     matched_gt_boxes.append(gt_box[iou_scores.index(max_iou)])
-                #print(f"\r{i}-th anchor loaded", end=" ", flush=True)
-                if a>1:
-                    break
-                #iou_scores = [compute_iou(anchor, gt_box) for gt_box in y]
-            
+            print(f"\r{i}-th anchor loaded", end=" ", flush=True)
         # print(f"Matched boxes length -> {len(iou_scores)}")
         # print(f"IoU scores first value -> {iou_scores[0]}")
         print(f"Matched gt_boxes length = {len(matched_gt_boxes)} ")
         cnt += 1
-        if(cnt > 0):
+        if(cnt >= 1):
             break
