@@ -51,6 +51,7 @@ class AnchorBox(object):
             boxes.append([cx, cy, cz, h, w, d])
 
     output = np.array(boxes).reshape([-1, 6])  # shape: [8732, 4]
+    print(output.shape)
     if self.clip:
       output = np.clip(output, a_min=-10, a_max=14)
     return output

@@ -40,12 +40,13 @@ class PointNetDataset(Dataset):
     feature = np.nan_to_num(feature, nan=0.0)
     feature = feature.T
     feature = torch.tensor(feature, dtype=torch.float32)
+    print(box)
     return feature, box
   
   def load_trainD(self, dir):
     pcds = os.listdir(str(dir) + "\\data")
     for pcd in pcds:
-      print(pcd)
+      print(f"\r{pcd}", end=" ", flush=True)
       points = o3d.io.read_point_cloud("pcd\\augmented\\data\\"+ str(pcd))
       points_np = np.asarray(points.points)
       points_np = (points_np - np.mean(points_np, axis=0)) / np.std(points_np, axis=0)

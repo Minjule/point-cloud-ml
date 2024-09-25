@@ -23,15 +23,12 @@ infos = {
 
 train_data = PointNetDataset("C:\\Users\\Acer\\Documents\\GitHub\\point-cloud-ml\\pcd\\augmented")
 train_loader = DataLoader(train_data, batch_size=2, shuffle=True)
-
-def generate_anchors(self):
-        boxes = AnchorBox(infos)()
-        return boxes
     
 def compute_intersection_volume(box1, box2):
         # Unpack box 1 and box 2
         center_x1, center_y1, center_z1, w1, h1, d1 = box1
-        center_x2, center_y2, center_z2, w2, h2, d2 = box2
+        center_x2, center_y2, center_z2 = box2[0]
+        w2, h2, d2 = box2[1]
         
         # Calculate min/max boundaries for each box
         x1_min, x1_max = center_x1 - w1 / 2, center_x1 + w1 / 2
@@ -42,13 +39,21 @@ def compute_intersection_volume(box1, box2):
         y2_min, y2_max = center_y2 - h2 / 2, center_y2 + h2 / 2
         z2_min, z2_max = center_z2 - d2 / 2, center_z2 + d2 / 2
         
+        x1_min, y1_min, z1_min = torch.tensor(x1_min), torch.tensor(y1_min), torch.tensor(z1_min)
+        x1_max, y1_max, z1_max = torch.tensor(x1_max), torch.tensor(y1_max), torch.tensor(z1_max)
+
         # Calculate the overlap in each dimension
-        x_overlap = max(0, min(x1_max, x2_max) - max(x1_min, x2_min))
-        y_overlap = max(0, min(y1_max, y2_max) - max(y1_min, y2_min))
-        z_overlap = max(0, min(z1_max, z2_max) - max(z1_min, z2_min))
+        x_overlap = torch.max(torch.zeros_like(x1_max), torch.min(x1_max, x2_max) - torch.max(x1_min, x2_min))
+        y_overlap = torch.max(torch.zeros_like(y1_max), torch.min(y1_max, y2_max) - torch.max(y1_min, y2_min))
+        z_overlap = torch.max(torch.zeros_like(z1_max), torch.min(z1_max, z2_max) - torch.max(z1_min, z2_min))
         
         # Compute intersection volume
         intersection_volume = x_overlap * y_overlap * z_overlap
+        print(f"x1_min - {x1_min}, y1_min - {y1_min}, z1_min - {z1_min}")
+        print(f"x1_max - {x1_max}, y1_max - {y1_max}, z1_max - {z1_max}")
+        print(f"x2_min - {x2_min}, y2_min - {y2_min}, z2_min - {z2_min}")
+        print(f"x2_max - {x2_max}, y2_max - {y2_max}, z2_max - {z2_max}")
+        print(f"overlaps ---------------------- {x_overlap}, {y_overlap}, {z_overlap}")
         
         return intersection_volume
     
@@ -57,23 +62,9 @@ def compute_iou(box1, box2):
         # volume calculation for 3D bounding boxes depending on your coordinate format.
         intersection_vol = compute_intersection_volume(box1, box2)  # You need this function
         vol_box1 = box1[3] * box1[4] * box1[5]  # width * height * depth
-        vol_box2 = box2[3] * box2[4] * box2[5]
+        vol_box2 = box2[1][0] * box2[1][1] * box2[1][2]
         union_vol = vol_box1 + vol_box2 - intersection_vol
         return intersection_vol / union_vol
-
-def match_anchors_to_ground_truth(anchors, loc_preds, gt_boxes, iou_threshold=0.5):
-        # anchors: predefined anchor boxes (3D anchors)
-        # loc_preds: predicted bounding boxes from the model
-        # gt_boxes: ground truth boxes
-        matched_gt_boxes = []
-        for i, anchor in enumerate(anchors):
-            iou_scores = [compute_iou(loc_preds[i], gt_box) for gt_box in gt_boxes]
-            max_iou = max(iou_scores)
-            if max_iou >= iou_threshold:
-                matched_gt_boxes.append(gt_boxes[iou_scores.index(max_iou)])
-            else:
-                matched_gt_boxes.append(None)  # Negative match, no object
-        return matched_gt_boxes
 
 def ssd_loss(loc_preds, matched_boxes):
 
@@ -108,68 +99,46 @@ if __name__ == '__main__':
         x = avg_pool(x)
         data = x
         y = y.to(device)
+        print(y.shape)
 
         bs = x.shape[0]
-        print(x[1][1])
         out = nn.Conv1d(3, 64, kernel_size=1)(x)
         out = (F.relu(out))
         out = nn.BatchNorm1d(64)(out)
-        print(out[1][1])
-        print(out.shape)
 
         out = nn.Conv1d(64, 128, kernel_size=1)(out)
         out = (F.relu(out))
         out = nn.BatchNorm1d(128)(out)
-        print(out[1][1])
-        print(out.shape)
 
         out = nn.Conv1d(128, 1024, kernel_size=1)(out)
         out = (F.relu(out))
         out = nn.BatchNorm1d(1024)(out)
-        print(out[1][1])
-        print(out.shape)
 
         out = nn.MaxPool1d(kernel_size=5076)(out).view(2, 1024)
-        print(out[1][1])
-        print(out.shape)
 
         out = nn.Linear(1024, 512)(out)
         out = (F.relu(out))
         out = nn.BatchNorm1d(512)(out)
-        print(out[1][1])
-        print(out.shape)
 
         out = nn.Linear(512, 256)(out)
         out = (F.relu(out))
         out = nn.BatchNorm1d(256)(out)
-        print(out[1][1])
-        print(out.shape)
 
         out = nn.Linear(256, 9)(out)
-        print(out[1][1])
-        print(out.shape)
 
         iden = torch.eye(3, requires_grad=True).repeat(bs, 1, 1)
         print(f"{iden} <- identity matrix")
         out = out.view(-1, 3, 3)  + iden
-        print(out[1][1])
-        print(out.shape)
 
         print("--------------------------- bmm ------------------------------")
 
         x = torch.bmm(x.transpose(2, 1), out).transpose(2, 1)
-        print(x[1][1])
-        print(x.shape)
 
         x = F.relu(nn.Conv1d(3, 64, kernel_size=1)(x))
         x = nn.BatchNorm1d(64)(x)
-        print(x[1][1])
-        print(x.shape)
 
         x = F.relu(nn.Conv1d(64, 64, kernel_size=1)(x))
         x = nn.BatchNorm1d(64)(x)
-        print(x[1][1])
-        print(x.shape)
 
         print("--------------------------- Tnet 2 ------------------------------")
 
@@ -177,46 +146,30 @@ if __name__ == '__main__':
         out = nn.Conv1d(64, 64, kernel_size=1)(x)
         out = (F.relu(out))
         out = nn.BatchNorm1d(64)(out)
-        print(out[1][1])
-        print(out.shape)
 
         out = nn.Conv1d(64, 128, kernel_size=1)(out)
         out = (F.relu(out))
         out = nn.BatchNorm1d(128)(out)
-        print(out[1][1])
-        print(out.shape)
 
         out = nn.Conv1d(128, 1024, kernel_size=1)(out)
         out = (F.relu(out))
         out = nn.BatchNorm1d(1024)(out)
-        print(out[1][1])
-        print(out.shape)
 
         out = nn.MaxPool1d(kernel_size=5076)(out).view(2, 1024)
-        print(out[1][1])
-        print(out.shape)
 
         out = nn.Linear(1024, 512)(out)
         out = (F.relu(out))
         out = nn.BatchNorm1d(512)(out)
-        print(out[1][1])
-        print(out.shape)
 
         out = nn.Linear(512, 256)(out)
         out = (F.relu(out))
         out = nn.BatchNorm1d(256)(out)
-        print(out[1][1])
-        print(out.shape)
 
         out = nn.Linear(256, 4096)(out)
-        print(out[1][1])
-        print(out.shape)
 
         iden = torch.eye(64, requires_grad=True).repeat(bs, 1, 1)
         print(f"{iden} <- identity matrix")
         out = out.view(-1, 64, 64)  + iden
-        print(out[1][1])
-        print(out.shape)
 
         print("--------------------------- bmm ------------------------------")
         
@@ -264,16 +217,31 @@ if __name__ == '__main__':
         print("----------------------------- anchor box match-----------------------")
         print("   ")
 
-        anchors = AnchorBox()(infos)
+        anchors = AnchorBox(infos)()
         matched_gt_boxes = []
+        a=0
+        print(f" y = {y}")
+        print(f"anchor[0] = {anchors[0]}")
+        iou_scores = []
         for i, anchor in enumerate(anchors):
-            iou_scores = [compute_iou(loc_preds[i], gt_box) for gt_box in y]
-            max_iou = torch.max(iou_scores)
-            if max_iou >= 0.5:
-                matched_gt_boxes.append(y[iou_scores.index(max_iou)])
-            else:
-                matched_gt_boxes.append(None)  # Negative match, no object
+            a+=1
+            for gt_box in y:
+                print(gt_box.shape)
+                if not np.all(np.isnan(np.array(gt_box))): 
+                    iou_scores = [compute_iou(anchor, box) for box in gt_box]
 
+            if len(iou_scores) != 0:
+                max_iou = torch.max(torch.tensor(iou_scores))
+                if max_iou >= 0.8:
+                    matched_gt_boxes.append(gt_box[iou_scores.index(max_iou)])
+                #print(f"\r{i}-th anchor loaded", end=" ", flush=True)
+                if a>1:
+                    break
+                #iou_scores = [compute_iou(anchor, gt_box) for gt_box in y]
+            
+        # print(f"Matched boxes length -> {len(iou_scores)}")
+        # print(f"IoU scores first value -> {iou_scores[0]}")
+        print(f"Matched gt_boxes length = {len(matched_gt_boxes)} ")
         cnt += 1
         if(cnt > 0):
             break
