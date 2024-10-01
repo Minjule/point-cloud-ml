@@ -1,24 +1,25 @@
-import open3d as o3d
 import numpy as np
-import json 
-import os
 import torch
 import torch.nn as nn
-import torch.optim as optim
 import torch.nn.functional as F
 from point_net import *
 from torch.utils.data import DataLoader
 from dataset import PointNetDataset
 from anchors import *
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+centers = {}
 
 infos = {
     'grid_size': (10, 10, 10),  # Number of grid points in (x, y, z) dimensions
-    'min_sizes': [0.13, 0.13, 0.13],  # Min sizes for anchor boxes in 3D
-    'max_sizes': [0.18, 0.18, 0.18],  # Max sizes for anchor boxes in 3D
-    'aspect_ratios': [(1, 1, 1), (1.5, 1, 1), (1, 1.5, 1)],  # Aspect ratios for anchor boxes
-    'steps': [0.5, 0.5, 0.5],  # Step size for the anchor grid in 3D space
-    'point_cloud_range': [-2.90265846,  0.13, 0.8, 0.18,  0.5, 1.5],  # 3D space range in (x_min, y_min, z_min, x_max, y_max, z_max)
-    'clip': True  
+    'min_sizes': [0.4, 0.4, 0.4],  # Min sizes for anchor boxes in 3D
+    'max_sizes': [0.6, 0.6, 0.6],  # Max sizes for anchor boxes in 3D
+    'aspect_ratios': [(1, 1, 1), (1, 1.3, 1.5), (1, 1.5, 1.2)],  # Aspect ratios for anchor boxes
+    'point_cloud_range': [-2.5,  -2.5, -2.5, 5,  2.5, 4.5],
+    #'point_cloud_range': [-2.90265846,  0.13, 0.8, 0.18,  0.5, 1.5],  # 3D space range in (x_min, y_min, z_min, x_max, y_max, z_max)
+    'clip': True 
 }
 
 train_data = PointNetDataset("C:\\Users\\Acer\\Documents\\GitHub\\point-cloud-ml\\pcd\\augmented")
@@ -235,12 +236,18 @@ if __name__ == '__main__':
                 non_nan_tensors = tensor_stack[~torch.isnan(tensor_stack)]
                 max_iou = torch.max(non_nan_tensors)
                 #print(f"iou_scores - {iou_scores}")
-                if max_iou >= 0.1:
+                if max_iou >= 0.05:
                     matched_gt_boxes.append(gt_box[iou_scores.index(max_iou)])
             print(f"\r{i}-th anchor loaded", end=" ", flush=True)
+            
+        centers['x'], centers['y'], centers['z'] = anchors[:, 0], anchors[:, 1], anchors[:, 2]
+        
+        df_centers = pd.DataFrame(centers)
+        sns.scatterplot(x='z', y='y', data=df_centers)
         # print(f"Matched boxes length -> {len(iou_scores)}")
         # print(f"IoU scores first value -> {iou_scores[0]}")
         print(f"Matched gt_boxes length = {len(matched_gt_boxes)} ")
+        plt.show()
         cnt += 1
         if(cnt >= 1):
             break
